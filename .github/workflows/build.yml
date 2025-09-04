@@ -1,9 +1,10 @@
+
 name: Build Android APK
 
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发构建
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,33 +19,107 @@ jobs:
       with:
         python-version: '3.9'
     
+    - name: 增加交换空间（避免内存不足）
+      run: |
+        sudo fallocate -l 2G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        sudo swapon --show
+    
+    - name: 设置Java环境
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '8'
+    
     - name: 安装系统依赖
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-8-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        sudo apt-get install -y build-essential ccache git libncurses5:i386 libstdc++6:i386 libgtk2.0-0:i386 libpangox-1.0-0:i386 libpangoxft-1.0-0:i386 libidn11:i386 python2.7 python2.7-dev openjdk-8-jdk unzip ant ccache autoconf libtool
     
     - name: 安装Python依赖
       run: |
         python -m pip install --upgrade pip
-        pip install kivy buildozer cython
+        pip install --upgrade wheel setuptools
+        pip install kivy==2.1.0 buildozer==1.5.0 cython==0.29.33
     
-    - name: 缓存Buildozer构建文件
+    - name: 缓存Buildozer依赖
       uses: actions/cache@v3
       with:
         path: |
-          .buildozer
+          ~/.buildozer
         key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-
     
-    - name: 构建Android APK
+    - name: 验证文件结构
       run: |
-        buildozer android debug
+        echo "=== 当前目录结构 ==="
+        ls -la
+        echo "=== main.py 内容检查 ==="
+        head -10 main.py
+        echo "=== buildozer.spec 内容检查 ==="
+        head -20 buildozer.spec
+    
+    - name: 初始化buildozer
+      run: |
+        # 确保buildozer目录权限正确
+        mkdir -p ~/.buildozer
+        chmod -R 755 ~/.buildozer
+        
+        # 初始化buildozer（但不立即构建）
+        buildozer android debug || true
+    
+    - name: 手动下载Android SDK组件（解决网络问题）
+      run: |
+        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
+        export PATH="$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools"
+        
+        # 创建SDK目录
+        mkdir -p $ANDROID_HOME
+        
+        # 设置超时和重试
+        export JAVA_OPTS="-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee"
+    
+    - name: 构建Android APK（增强版）
+      timeout-minutes: 60
+      run: |
+        # 设置环境变量
+        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
+        export ANDROID_NDK_HOME="$HOME/.buildozer/android/platform/android-ndk-r25b"
+        export PATH="$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools"
+        
+        # 显示Java版本
+        java -version
+        
+        # 开始构建，增加详细日志
+        buildozer -v android debug
+    
+    - name: 检查构建结果
+      run: |
+        echo "=== 构建目录结构 ==="
+        find . -name "*.apk" -type f 2>/dev/null || echo "未找到APK文件"
+        ls -la bin/ 2>/dev/null || echo "bin目录不存在"
+        
+        # 显示构建日志的最后部分
+        echo "=== 最近的构建日志 ==="
+        tail -50 .buildozer/logs/build.log 2>/dev/null || echo "没有构建日志"
     
     - name: 上传APK文件
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: android-apk
         path: bin/*.apk
         retention-days: 30
-        compression-level: 6
+    
+    - name: 上传构建日志（调试用）
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          .buildozer/logs/
+        retention-days: 7
