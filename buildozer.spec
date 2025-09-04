@@ -1,95 +1,92 @@
 
 [app]
 
-# (str) 应用程序标题
+# 应用程序标题
 title = 双色球选号器
 
-# (str) 包名
+# 包名（只能包含字母、数字、下划线）
 package.name = ballselector
 
-# (str) 包域名
+# 包域名
 package.domain = com.example
 
-# (str) 应用程序的源代码目录
+# 源代码目录
 source.dir = .
 
-# (list) 应用程序的源文件（留空则包含所有文件）
+# 包含的文件类型
 source.include_exts = py,png,jpg,kv,atlas
 
-# (str) 应用程序版本
+# 应用版本
 version = 1.0
 
-# (list) 应用程序要求
-requirements = python3,kivy
+# Python依赖包（指定版本避免冲突）
+requirements = python3,kivy==2.1.0
 
-# (str) 应用程序预安装图标
-#icon.filename = %(source.dir)s/data/icon.png
-
-# (str) 支持的方向 (landscape, sensorLandscape, portrait, sensorPortrait, all)
+# 屏幕方向
 orientation = portrait
 
-# (bool) 指示应用程序是否应在全屏模式下运行
+# 全屏模式
 fullscreen = 0
 
 [buildozer]
 
-# (int) 日志级别 (0 = 错误, 1 = 信息, 2 = 调试)
+# 日志级别
 log_level = 2
 
-# (int) 显示警告
+# 在root权限下显示警告
 warn_on_root = 1
 
 [app:android]
 
-# (str) Android入口点
+# Android入口点
 android.entrypoint = org.kivy.android.PythonActivity
 
-# (list) 应用程序权限
-android.permissions = INTERNET
+# 应用权限
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
-# (int) Target Android API
-android.api = 30
+# 目标Android API（降低到更稳定的版本）
+android.api = 29
 
-# (int) Minimum API required
+# 最低API版本
 android.minapi = 21
 
-# (str) Android NDK版本
-android.ndk = 25b
+# Android NDK版本（使用稳定版本）
+android.ndk = 23b
 
-# (str) Android SDK版本
-android.sdk = 33
+# Android SDK版本
+android.sdk = 29
 
-# (bool) 使用--private数据存储
+# 私有存储
 android.private_storage = True
 
-# (str) Android额外的Java .jar文件路径
-#android.add_jars = foo.jar,bar.jar
+# 调试模式
+android.debug = True
 
-# (str) Android额外的Java源文件路径
-#android.add_src = java
-
-# (str) ANT路径
-#android.ant_path = /usr/bin/ant
-
-# (bool) 如果为True，那么创建一个调试版本
-android.debug = False
-
-# (str) The format used to package the app for release mode (aab or apk)
+# 发布格式
 android.release_artifact = apk
 
-# (str) Android logcat过滤器
+# logcat过滤器
 android.logcat_filters = *:S python:D
 
-# (bool) 复制库而不是重新编译
+# 复制库文件
 android.copy_libs = 1
 
-# (str) The Android arch to build for
-android.archs = arm64-v8a, armeabi-v7a
+# 支持的架构（先只构建arm64减少时间）
+android.archs = arm64-v8a
+
+# 接受SDK许可
+android.accept_sdk_license = True
+
+# gradle依赖
+android.gradle_dependencies = 
+
+# Java构建工具
+android.ant_path = /usr/bin/ant
 
 [buildozer:global]
 
-# (str) 构建缓存目录路径
+# 构建缓存目录
 build_dir = ./.buildozer
 
-# (str) 构建输出目录路径  
+# 输出目录
 bin_dir = ./bin
